@@ -14,3 +14,7 @@
 
 5) Slow candidates on small servers
 - per-action timeout + global safety break + limited action space
+
+
+6) No valid candidate
+- If all candidates are rejected (already-optimized input, strict SSIM, tight timeouts), the demo returns the original file rather than failing.

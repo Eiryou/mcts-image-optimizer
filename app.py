@@ -627,7 +627,7 @@ def select_codec_node(root: MCTSNode, exploration: float, priors: Dict[str, floa
     return best
 
 
-def mcts_optimize(original: Image.Image, original_bytes_len: int, profile: ImageProfile,
+def mcts_optimize(original: Image.Image, original_bytes: bytes, original_bytes_len: int, profile: ImageProfile,
                   cfg: ScoringConfig, budget: int = 120, exploration: float = 1.2, seed: int = 0) -> Tuple[EvalResult, Dict]:
     random.seed(seed)
 
@@ -687,13 +687,20 @@ def mcts_optimize(original: Image.Image, original_bytes_len: int, profile: Image
             break
 
     if best is None:
+        # Fallback strategy:
+        # 1) Try a safe PNG optimize pass.
+        # 2) If it still fails (often because the original is already highly optimized or constraints are strict),
+        #    return the original bytes as a VALID result instead of raising an error.
         fallback = Action(codec="png", quality=100, resize_scale=1.0, grayscale=False,
                           denoise=False, sharpen=False, subsampling=0, strip_metadata=True)
         res = evaluate_action(original, original_bytes_len, profile, fallback, cfg)
         debug = {"priors": priors, "logs": logs, "best_action": None, "cache_size": len(cache)}
         if res.ok:
             return res, debug
-        return EvalResult(False, original_bytes_len, 1.0, 0.0, -10**18, "ORIG", b"", reason="no valid candidate"), debug
+
+        # No valid candidate met constraints (size/SSIM/timeout). Return original.
+        return EvalResult(True, original_bytes_len, 1.0, 0.0, 0.0, "ORIG", original_bytes,
+                          reason="no valid smaller candidate; returned original"), debug
 
     debug = {"priors": priors, "logs": logs, "best_action": best_action, "cache_size": len(cache)}
     return best, debug
@@ -831,6 +838,8 @@ def show_result(original_bytes: bytes, best: EvalResult, in_name: str):
     c4.metric("Ratio", f"x{ratio:.2f}")
 
     st.write(f"**Output:** {best.out_format} / **SSIM:** `{best.ssim:.4f}` / **Eval:** `{best.time_ms:.1f} ms` / **score:** `{best.score:.3f}`")
+    if (best.out_format or "").upper() == "ORIG":
+        st.info("No candidate met constraints (size/SSIM/timeout). Returning the original file. Try lowering target SSIM, increasing timeout, or allowing a small size increase.")
 
     ext = choose_output_ext(best.out_format)
     base = os.path.splitext(safe_filename(in_name))[0]
@@ -883,7 +892,7 @@ def main():
             if run:
                 with st.spinner("Searching… (MCTS evaluates candidates)"):
                     t0 = time.perf_counter()
-                    best, debug = mcts_optimize(img, len(original_bytes), profile, cfg, budget=budget, exploration=1.2, seed=seed)
+                    best, debug = mcts_optimize(img, original_bytes, len(original_bytes), profile, cfg, budget=budget, exploration=1.2, seed=seed)
                     total = time.perf_counter() - t0
 
                 if not best.ok:
@@ -948,7 +957,7 @@ def main():
                     try:
                         img = load_image_from_bytes(b)
                         profile = estimate_profile(img)
-                        best, _ = mcts_optimize(img, len(b), profile, cfg, budget=budget, exploration=1.2, seed=seed + i)
+                        best, _ = mcts_optimize(img, b, len(b), profile, cfg, budget=budget, exploration=1.2, seed=seed + i)
                         if best.ok:
                             ext = choose_output_ext(best.out_format)
                             base = os.path.splitext(name)[0]
