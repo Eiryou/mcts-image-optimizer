@@ -11,3 +11,13 @@ Extended notes are organized under `docs/`:
 - docs/ablation_guide.md
 - docs/performance_render.md
 - docs/deployment_render.md
+
+---
+## Render/Proxy note: Unicode filenames & Streamlit uploads
+Some hosting stacks can break Streamlit uploads when the filename contains non-ASCII characters
+(e.g., Japanese screenshot names). A known workaround is pinning Tornado to a pre-6.5.0 version.
+
+This repo pins:
+- tornado<=6.4.2
+
+If users still see upload errors, rename files to ASCII (e.g., `screenshot.png`) and retry.
