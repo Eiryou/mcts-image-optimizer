@@ -1,0 +1,59 @@
+# MCTS Image Optimizer (MIO) — Streamlit Web Demo
+
+Search-based image compression demo: **MCTS × Heuristics × SSIM × Structural Intervention**.
+
+This tool does not rely on fixed presets. Instead, it searches compression actions per image using:
+- Monte Carlo Tree Search (MCTS)
+- A scoring function combining size reduction, SSIM, and runtime
+- Heuristic constraints (especially for text-like images)
+
+## Features
+- Single image optimization (preview + metrics + download)
+- Batch optimization (multiple images or ZIP input → ZIP output)
+- Baseline comparison (fixed preset)
+- Debug logs (optional)
+
+## Disclaimer
+This demo is provided “AS IS”, without warranty. Use at your own risk.  
+Always keep backups of your original files.
+
+**Author / Contact**: X (Twitter) **@nagisa7654321**
+
+---
+
+## Documentation (Technical Notes)
+
+- `docs/overview.md` — big picture & design goals
+- `docs/algorithm_mcts.md` — MCTS tree, selection/backprop details
+- `docs/action_space.md` — why the action space is shaped this way
+- `docs/scoring.md` — scoring function (math + tuning guide)
+- `docs/ssim_approx.md` — SSIM approximation details and limitations
+- `docs/heuristics.md` — text-like detection and safety constraints
+- `docs/failure_modes.md` — known failure modes and why we guard them
+- `docs/ablation_guide.md` — how to benchmark against baseline
+- `docs/performance_render.md` — practical deployment tuning for Render
+- `docs/deployment_render.md` — step-by-step Render deployment
+
+---
+
+## Local Run
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Open: http://localhost:8501
+
+---
+
+## Deploy on Render
+
+This repository includes `render.yaml`, so you can deploy directly:
+1. Push this repo to GitHub
+2. Render → New → Web Service → Connect repo
+3. Render detects `render.yaml`
+4. Deploy

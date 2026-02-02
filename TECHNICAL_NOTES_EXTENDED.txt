@@ -1,0 +1,13 @@
+MCTS Image Optimizer (MIO) — Extended Notes
+
+Extended notes are organized under `docs/`:
+- docs/overview.md
+- docs/algorithm_mcts.md
+- docs/action_space.md
+- docs/scoring.md
+- docs/ssim_approx.md
+- docs/heuristics.md
+- docs/failure_modes.md
+- docs/ablation_guide.md
+- docs/performance_render.md
+- docs/deployment_render.md

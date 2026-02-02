@@ -1,0 +1,9 @@
+MCTS Image Optimizer (MIO) — Technical Notes (Short)
+
+For deeper documentation, see the `docs/` directory.
+
+Highlights:
+- 2-level MCTS tree (codec → action)
+- staged timeouts for stability
+- SSIM thresholding + text-like heuristics
+- score = size reduction + SSIM margin - runtime penalty

@@ -1,0 +1,11 @@
+MCTS Image Optimizer (MIO)
+
+This project depends on third-party libraries such as:
+- Streamlit
+- Pillow
+- NumPy
+
+Please refer to each library's license for details.
+
+Author: Hideyoshi Murakami
+X (Twitter): @nagisa7654321
