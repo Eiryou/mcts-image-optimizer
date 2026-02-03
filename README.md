@@ -22,7 +22,6 @@ https://x.com/nagisa7654321
 https://qiita.com/Hideyoshi_Murakami/items/d63f136afe60f406d192
 
 
-
 ## Features
 - Single image optimization (preview + metrics + download)
 - Batch optimization (multiple images or ZIP input → ZIP output)
@@ -36,6 +35,8 @@ Always keep backups of your original files.
 **Author / Contact**: X (Twitter) **@nagisa7654321**
 
 ---
+## License
+MIT License
 
 ## Documentation (Technical Notes)
 
