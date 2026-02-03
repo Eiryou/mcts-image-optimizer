@@ -8,6 +8,21 @@ This tool does not rely on fixed presets. Instead, it searches compression actio
 - A scoring function combining size reduction, SSIM, and runtime
 - Heuristic constraints (especially for text-like images)
 
+## DOI(Zenodo)
+10.5281/zenodo.18464299
+https://doi.org/10.5281/zenodo.18464299
+
+## DEMO URL
+https://mcts-image-optimizer.onrender.com/
+
+## X(Twitter)
+https://x.com/nagisa7654321
+
+## Qiita
+https://qiita.com/Hideyoshi_Murakami/items/d63f136afe60f406d192
+
+
+
 ## Features
 - Single image optimization (preview + metrics + download)
 - Batch optimization (multiple images or ZIP input → ZIP output)
