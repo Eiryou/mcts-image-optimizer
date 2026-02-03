@@ -1,4 +1,5 @@
 # MCTS Image Optimizer (MIO) — Streamlit Web Demo
+> Note: If the input is already well-optimized, the reduction may be 0% (the original file is returned).
 
 Search-based image compression demo: **MCTS × Heuristics × SSIM × Structural Intervention**.
 

@@ -248,7 +248,7 @@ def estimate_profile(img: Image.Image) -> ImageProfile:
     uniq = np.unique(q.reshape(-1, 3), axis=0)
     estimated_colors = int(uniq.shape[0])
 
-    is_text_like = (edge_density > 0.10 and colorfulness < 0.25 and estimated_colors < 180)
+    is_text_like = (edge_density > 0.10 and colorfulness < 0.18 and estimated_colors < 140)
 
     return ImageProfile(
         width=w, height=h, has_alpha=has_alpha,
@@ -318,7 +318,7 @@ def encode_image(img: Image.Image, action: Action, profile: ImageProfile) -> Tup
 
     if codec == "png":
         im2 = im
-        if (not profile.has_alpha) and profile.estimated_colors < 64 and (im2.mode in ("RGB", "RGBA")):
+        if (not profile.has_alpha) and profile.estimated_colors < 192 and (im2.mode in ("RGB", "RGBA")):
             try:
                 im2 = im2.convert("P", palette=Image.ADAPTIVE, colors=min(256, max(16, profile.estimated_colors)))
             except Exception:
@@ -342,6 +342,17 @@ def encode_image(img: Image.Image, action: Action, profile: ImageProfile) -> Tup
             **save_kwargs
         )
         return bio.getvalue(), "JPEG"
+    if codec == "webp_lossless":
+        if action.strip_metadata:
+            try:
+                _strip_exif_safe(save_kwargs)
+            except Exception:
+                pass
+        if im.mode not in ("RGB", "RGBA", "L"):
+            im = im.convert("RGB")
+        im.save(bio, format="WEBP", lossless=True, method=6, **save_kwargs)
+        return bio.getvalue(), "WEBP"
+
 
     if codec == "webp":
         if action.strip_metadata:
@@ -502,21 +513,21 @@ class MCTSNode:
         return self.value_mean + exploration * math.sqrt(math.log(self.parent.visits + 1) / self.visits)
 
 
-def build_action_space(profile: ImageProfile) -> Dict[str, List[Action]]:
-    codecs: List[str] = ["webp", "jpeg", "png"]
+def build_action_space(profile: ImageProfile, allow_grayscale: bool) -> Dict[str, List[Action]]:
+    codecs: List[str] = ["webp", "webp_lossless", "jpeg", "png"]
     if _AVIF_PLUGIN_OK:
         codecs.append("avif")
 
     if profile.is_text_like:
         qualities = [55, 65, 75, 85, 92]
         scales = [1.0, 0.90, 0.80, 0.70]
-        allow_gray = [False, True]
+        allow_gray = [False, True] if allow_grayscale else [False]
         allow_denoise = [False, True]
         allow_sharp = [False, True]
     else:
         qualities = [45, 55, 65, 75, 85, 92]
         scales = [1.0, 0.90, 0.80]
-        allow_gray = [False]
+        allow_gray = [False, True] if allow_grayscale else [False]
         allow_denoise = [False, True]
         allow_sharp = [False]
 
@@ -542,6 +553,17 @@ def build_action_space(profile: ImageProfile) -> Dict[str, List[Action]]:
                             codec="webp", quality=q, resize_scale=scale, grayscale=gray,
                             denoise=dn, sharpen=sh, subsampling=0, strip_metadata=True
                         ))
+    # WebP lossless (small search space, screenshot-friendly)
+    for scale in [1.0]:
+        for gray in allow_gray:
+            for dn in allow_denoise:
+                for sh in allow_sharp:
+                    actions_by_codec["webp_lossless"].append(Action(
+                        codec="webp_lossless", quality=100, resize_scale=scale, grayscale=gray,
+                        denoise=dn, sharpen=sh, subsampling=0, strip_metadata=True
+                    ))
+
+
 
     for q in qualities:
         for scale in scales:
@@ -570,12 +592,13 @@ def build_action_space(profile: ImageProfile) -> Dict[str, List[Action]]:
 
 
 def pick_codec_priors(profile: ImageProfile) -> Dict[str, float]:
-    priors = {"webp": 1.0, "jpeg": 1.0, "png": 1.0}
+    priors = {"webp": 1.0, "webp_lossless": 0.9, "jpeg": 1.0, "png": 1.0}
     if _AVIF_PLUGIN_OK:
         priors["avif"] = 0.8
 
     if profile.is_text_like:
-        priors["webp"] *= 1.2
+        priors["webp"] *= 1.15
+        priors["webp_lossless"] *= 1.25
         priors["png"] *= 1.1
         priors["jpeg"] *= 0.8
         if "avif" in priors:
@@ -628,10 +651,10 @@ def select_codec_node(root: MCTSNode, exploration: float, priors: Dict[str, floa
 
 
 def mcts_optimize(original: Image.Image, original_bytes: bytes, original_bytes_len: int, profile: ImageProfile,
-                  cfg: ScoringConfig, budget: int = 120, exploration: float = 1.2, seed: int = 0) -> Tuple[EvalResult, Dict]:
+                  cfg: ScoringConfig, budget: int = 120, exploration: float = 1.2, seed: int = 0, allow_grayscale: bool = False) -> Tuple[EvalResult, Dict]:
     random.seed(seed)
 
-    actions_by_codec = build_action_space(profile)
+    actions_by_codec = build_action_space(profile, allow_grayscale=allow_grayscale)
     priors = pick_codec_priors(profile)
 
     root = MCTSNode(None, "root", payload=None)
@@ -761,11 +784,12 @@ def render_header():
     </style>
     """, unsafe_allow_html=True)
     st.title("MCTS Image Optimizer (MIO) — Search-based Image Compression Demo")
+    st.warning("Disclaimer: This is an experimental demo provided AS-IS with no warranty. Use at your own risk. Do not upload sensitive/private data. If an input is already well-optimized, reduction may be 0% (the original file is returned). Author: @nagisa7654321", icon="⚠️")
     st.write("**MCTS × Heuristics × Visual Quality (SSIM) × Structural Intervention** — searches an optimal compression pipeline per image.")
     st.caption("Streamlit demo for Render deployment • Single & Batch/ZIP • SSIM is downscaled and tiled for speed")
 
 
-def sidebar_controls() -> Tuple[ScoringConfig, int, int, bool, bool]:
+def sidebar_controls() -> Tuple[ScoringConfig, int, int, bool, bool, bool]:
     st.sidebar.header("Optimization Parameters (Search)")
 
     budget = st.sidebar.slider("Search iterations (budget)", 20, 400, 120, 10,
@@ -790,6 +814,7 @@ def sidebar_controls() -> Tuple[ScoringConfig, int, int, bool, bool]:
 
     show_debug = st.sidebar.checkbox("Show debug logs", value=False)
     show_baseline = st.sidebar.checkbox("Show baseline comparison (fixed preset)", value=True)
+    allow_grayscale = st.sidebar.checkbox("Allow grayscale candidates (higher compression / may remove color)", value=False)
 
     st.sidebar.divider()
     with st.sidebar.expander("Disclaimer / Author", expanded=False):
@@ -805,7 +830,7 @@ def sidebar_controls() -> Tuple[ScoringConfig, int, int, bool, bool]:
         per_action_timeout_s=float(per_action_timeout),
         allow_size_increase_pct=float(allow_inc),
     )
-    return cfg, int(budget), int(seed), bool(show_debug), bool(show_baseline)
+    return cfg, int(budget), int(seed), bool(show_debug), bool(show_baseline), bool(allow_grayscale)
 
 
 def show_profile(profile: ImageProfile):
@@ -851,7 +876,7 @@ def show_result(original_bytes: bytes, best: EvalResult, in_name: str):
 def main():
     st.set_page_config(page_title="MCTS Image Optimizer (MIO)", layout="wide")
     render_header()
-    cfg, budget, seed, show_debug, show_baseline = sidebar_controls()
+    cfg, budget, seed, show_debug, show_baseline, allow_grayscale = sidebar_controls()
 
     tab1, tab2 = st.tabs(["Single Image", "Batch / ZIP"])
 
@@ -892,7 +917,7 @@ def main():
             if run:
                 with st.spinner("Searching… (MCTS evaluates candidates)"):
                     t0 = time.perf_counter()
-                    best, debug = mcts_optimize(img, original_bytes, len(original_bytes), profile, cfg, budget=budget, exploration=1.2, seed=seed)
+                    best, debug = mcts_optimize(img, original_bytes, len(original_bytes), profile, cfg, budget=budget, exploration=1.2, seed=seed, allow_grayscale=allow_grayscale)
                     total = time.perf_counter() - t0
 
                 if not best.ok:
@@ -957,7 +982,7 @@ def main():
                     try:
                         img = load_image_from_bytes(b)
                         profile = estimate_profile(img)
-                        best, _ = mcts_optimize(img, b, len(b), profile, cfg, budget=budget, exploration=1.2, seed=seed + i)
+                        best, _ = mcts_optimize(img, b, len(b), profile, cfg, budget=budget, exploration=1.2, seed=seed + i, allow_grayscale=allow_grayscale)
                         if best.ok:
                             ext = choose_output_ext(best.out_format)
                             base = os.path.splitext(name)[0]
@@ -988,6 +1013,8 @@ def main():
     st.markdown(f"<div class='footer'>X (Twitter): <b>{X_HANDLE}</b> • {time.strftime('%Y-%m-%d')}</div>",
                 unsafe_allow_html=True)
 
+
+    st.caption("If the input is already well-optimized, the reduction may be 0% (the original file is returned).")
 
 if __name__ == "__main__":
     main()
