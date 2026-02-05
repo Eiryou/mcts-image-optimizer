@@ -52,6 +52,11 @@ Apache License 2.0
 - `docs/deployment_render.md` — step-by-step Render deployment
 
 ---
+##
+Why so many clones but few stars?
+
+This is a “try locally” type of project.
+If this helped you, please consider starring ⭐ (it supports further development).
 
 ## Local Run
 
