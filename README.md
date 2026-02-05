@@ -36,7 +36,7 @@ Always keep backups of your original files.
 
 ---
 ## License
-MIT License
+Apache License 2.0
 
 ## Documentation (Technical Notes)
 
