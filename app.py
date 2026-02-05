@@ -4,7 +4,7 @@
 """
 =============================================================================
 PRODUCT:    MCTS Image Optimizer (MIO) - Streamlit Web Demo v0.1 (FIXED)
-AUTHOR:     Hideyoshi Murakami + ChatGPT
+AUTHOR:     Hideyoshi Murakami 
 DATE:       2026-02-02
 
 Goal:
