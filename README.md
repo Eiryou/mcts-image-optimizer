@@ -81,5 +81,5 @@ This repository includes `render.yaml`, so you can deploy directly:
 4. Deploy
 
 ## Contact
-For comments, work, and collaborations, please contact us here 
+For comments, work, and collaborations, please contact us here and If you want to use it for commercial purposes, please contact me
 ## murakami3tech6compres9sion@gmail.com   
